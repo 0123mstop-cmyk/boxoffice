@@ -24,7 +24,45 @@ API_URL = (
 # 한국 시간대(UTC+9). 한국은 서머타임이 없어서 +9시간 고정이면 충분합니다.
 KST = timezone(timedelta(hours=9))
 
-st.set_page_config(page_title="어제의 박스오피스", page_icon="🎬", layout="wide")
+st.set_page_config(page_title="박스오피스 알려줄게요!", page_icon="🍿", layout="wide")
+
+# ─────────────────────────────────────────────
+# 마스코트: 근육질 팝콘 (SVG로 코드 안에서 직접 그린 그림이라 이미지 파일이 필요 없어요)
+# ─────────────────────────────────────────────
+MASCOT_SVG = """<svg viewBox="0 0 200 220" xmlns="http://www.w3.org/2000/svg">
+<g fill="#ffd6a5" stroke="#e8a46a" stroke-width="3">
+<ellipse cx="40" cy="128" rx="22" ry="13"/>
+<rect x="22" y="80" width="20" height="55" rx="10"/>
+<circle cx="30" cy="108" r="14"/>
+<circle cx="32" cy="76" r="13"/>
+<ellipse cx="160" cy="128" rx="22" ry="13"/>
+<rect x="158" y="80" width="20" height="55" rx="10"/>
+<circle cx="170" cy="108" r="14"/>
+<circle cx="168" cy="76" r="13"/>
+</g>
+<g fill="#fff6d6" stroke="#f0c75e" stroke-width="3">
+<circle cx="70" cy="45" r="22"/>
+<circle cx="132" cy="46" r="22"/>
+<circle cx="100" cy="38" r="26"/>
+<circle cx="85" cy="62" r="20"/>
+<circle cx="118" cy="64" r="20"/>
+</g>
+<polygon points="55,80 145,80 135,190 65,190" fill="#ffffff" stroke="#c92a2a" stroke-width="3"/>
+<g fill="#e03131">
+<polygon points="55,80 73,80 79,190 65,190"/>
+<polygon points="91,80 109,80 107,190 93,190"/>
+<polygon points="127,80 145,80 135,190 121,190"/>
+</g>
+<g stroke="#222" stroke-width="3" stroke-linecap="round" fill="none">
+<line x1="80" y1="106" x2="94" y2="110"/>
+<line x1="120" y1="106" x2="106" y2="110"/>
+<path d="M86 136 Q100 150 114 136"/>
+</g>
+<circle cx="88" cy="120" r="5" fill="#222"/>
+<circle cx="112" cy="120" r="5" fill="#222"/>
+<path d="M22 104 Q30 98 38 104" stroke="#e8a46a" stroke-width="3" fill="none"/>
+<path d="M162 104 Q170 98 178 104" stroke="#e8a46a" stroke-width="3" fill="none"/>
+</svg>"""
 
 
 # ─────────────────────────────────────────────
@@ -152,8 +190,17 @@ def show_error(kind):
 # ─────────────────────────────────────────────
 # 화면 시작
 # ─────────────────────────────────────────────
-st.title("🎬 박스오피스 알려줄게요!")
-st.write("안녕하세요! 🌸 오늘은 제가 영화 순위를 알려 드릴게요. 보고 싶은 날짜를 골라 주세요!")
+st.title("🍿 박스오피스 알려줄게요!")
+
+# 왼쪽에는 마스코트 그림, 오른쪽에는 마스코트의 인사말
+mascot_col, talk_col = st.columns([1, 3])
+with mascot_col:
+    st.image(MASCOT_SVG, width=160)
+with talk_col:
+    st.markdown(
+        "### 💪 안녕하세요! 저는 근육 팝콘이에요!\n"
+        "오늘 영화 순위는 제가 힘차게 알려 드릴게요! 보고 싶은 날짜를 골라 주세요!"
+    )
 
 yesterday = get_yesterday_kst()
 
