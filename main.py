@@ -204,16 +204,55 @@ with talk_col:
 
 yesterday = get_yesterday_kst()
 
-# 달력으로 날짜 고르기. 처음에는 어제가 선택되어 있고,
+# KOBIS 일별 자료가 제공되기 시작한 무렵의 날짜 (고를 수 있는 가장 이른 날)
+MIN_DATE = date(2003, 11, 11)
+
+# 선택한 날짜는 st.session_state["picked_date"]에 기억해 둡니다.
+# (버튼과 달력이 같은 값을 함께 쓰려고 이렇게 해요)
+if "picked_date" not in st.session_state:
+    st.session_state["picked_date"] = yesterday
+# 화면을 켜 둔 채로 자정이 지나 '어제'가 바뀌었을 때 범위를 벗어나지 않게 맞춰 줍니다.
+if st.session_state["picked_date"] > yesterday:
+    st.session_state["picked_date"] = yesterday
+
+
+def go_prev_day():
+    """◀ 전날 버튼: 하루 전으로."""
+    if st.session_state["picked_date"] > MIN_DATE:
+        st.session_state["picked_date"] -= timedelta(days=1)
+
+
+def go_next_day():
+    """다음날 ▶ 버튼: 하루 뒤로 (어제까지만)."""
+    if st.session_state["picked_date"] < get_yesterday_kst():
+        st.session_state["picked_date"] += timedelta(days=1)
+
+
+# 가운데는 달력, 양옆은 전날/다음날 버튼.
 # max_value 덕분에 어제보다 늦은 날(오늘 포함)은 고를 수 없습니다.
-# min_value는 KOBIS 일별 자료가 제공되기 시작한 무렵의 날짜입니다.
-picked = st.date_input(
-    "어느 날 순위가 궁금해요? 📅",
-    value=yesterday,
-    min_value=date(2003, 11, 11),
-    max_value=yesterday,
-    help="오늘 집계는 아직 끝나지 않아서, 어제까지만 고를 수 있어요!",
-)
+btn_prev, btn_date, btn_next = st.columns([1, 3, 1], vertical_alignment="bottom")
+with btn_prev:
+    st.button(
+        "◀ 전날",
+        on_click=go_prev_day,
+        disabled=st.session_state["picked_date"] <= MIN_DATE,
+        use_container_width=True,
+    )
+with btn_date:
+    picked = st.date_input(
+        "어느 날 순위가 궁금해요? 📅",
+        min_value=MIN_DATE,
+        max_value=yesterday,
+        key="picked_date",
+        help="오늘 집계는 아직 끝나지 않아서, 어제까지만 고를 수 있어요!",
+    )
+with btn_next:
+    st.button(
+        "다음날 ▶",
+        on_click=go_next_day,
+        disabled=st.session_state["picked_date"] >= yesterday,
+        use_container_width=True,
+    )
 target_dt = picked.strftime("%Y%m%d")  # 예: 20261020 (yyyymmdd 여덟 자리)
 st.caption(f"{picked.strftime('%Y년 %m월 %d일')} 순위예요 · 출처: 영화진흥위원회 KOBIS")
 
@@ -318,8 +357,39 @@ table = pd.DataFrame(
         "스크린수": df["scrnCnt"].apply(fmt),
     }
 )
-styled = table.style.apply(
-    lambda col: [rank_change_style(v) for v in col], subset=["등락"]
+# 영화명 검색: 글자가 들어간 영화만 표에 보여 줍니다 (대소문자 구분 없음)
+keyword = st.text_input("영화명으로 찾아볼까요? 🔍", placeholder="예: 영화 이름 일부만 써도 돼요!").strip()
+if keyword:
+    mask = df["movieNm"].fillna("").str.contains(keyword, case=False, regex=False)
+    shown = table[mask]
+else:
+    shown = table
+
+if shown.empty:
+    st.info("그 이름의 영화는 이날 순위표에 없어요 🥲 다른 글자로 찾아볼까요?")
+else:
+    styled = shown.style.apply(
+        lambda col: [rank_change_style(v) for v in col], subset=["등락"]
+    )
+    st.dataframe(styled, hide_index=True, use_container_width=True)
+
+# 표 CSV 다운로드 (검색과 상관없이 그날 전체 순위가 들어가요).
+# utf-8-sig로 저장해야 엑셀에서 한글이 깨지지 않습니다.
+csv_df = pd.DataFrame(
+    {
+        "순위": df["rank"],
+        "전일대비순위증감": df["rankInten"],
+        "영화명": df["movieNm"],
+        "개봉일": df["openDt"],
+        "관객수": df["audiCnt"],
+        "누적관객": df["audiAcc"],
+        "스크린수": df["scrnCnt"],
+    }
 )
-st.dataframe(styled, hide_index=True, use_container_width=True)
+st.download_button(
+    "📥 이날 순위표 CSV로 받기",
+    data=csv_df.to_csv(index=False).encode("utf-8-sig"),
+    file_name=f"boxoffice_{target_dt}.csv",
+    mime="text/csv",
+)
 st.caption("▲ 빨강은 어제보다 순위가 올랐다는 뜻, ▼ 파랑은 내렸다는 뜻이에요! 🏆는 100만 명이 넘게 본 영화예요~")
