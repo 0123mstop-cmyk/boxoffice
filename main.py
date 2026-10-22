@@ -104,39 +104,39 @@ def fetch_box_office(_key, target_dt):
 # ─────────────────────────────────────────────
 ERROR_GUIDE = {
     "no_key": (
-        "인증키(KOBIS_KEY)를 찾을 수 없어요.",
-        "Streamlit Cloud 앱 설정(Settings) → Secrets에 아래처럼 입력했는지 확인하세요.\n\n"
+        "앗, 인증키(KOBIS_KEY)를 못 찾겠어요! 🥲",
+        "Streamlit Cloud 앱 설정(Settings) → Secrets에 아래처럼 넣었는지 확인해 주세요!\n\n"
         "`KOBIS_KEY = \"발급받은_인증키\"`\n\n"
-        "(내 컴퓨터에서 실행 중이라면 `.streamlit/secrets.toml` 파일에 넣어야 해요.)",
+        "(내 컴퓨터에서 실행 중이라면 `.streamlit/secrets.toml` 파일에 넣어야 해요~)",
     ),
     "timeout": (
-        "KOBIS 서버가 제때 응답하지 않았어요.",
-        "잠시 후 다시 시도해 보세요. 계속 안 되면 KOBIS 사이트가 점검 중인지 확인해 보세요.",
+        "KOBIS 서버가 대답을 안 해 줘요... 🐢",
+        "조금 있다가 다시 해 볼까요? 계속 안 되면 KOBIS 사이트가 점검 중인지 확인해 주세요!",
     ),
     "network": (
-        "KOBIS 서버에 연결하지 못했어요.",
-        "네트워크 상태나 KOBIS 사이트 점검 여부를 확인하고, 잠시 후 다시 시도해 보세요.",
+        "KOBIS 서버에 연결이 안 돼요! 📡",
+        "인터넷 상태나 KOBIS 사이트 점검 여부를 확인해 보고, 잠시 후에 다시 해 봐요!",
     ),
     "http": (
-        "KOBIS 서버가 정상 응답을 주지 않았어요.",
-        "잠시 후 다시 시도해 보세요. 계속되면 KOBIS 사이트 공지(점검 여부)를 확인해 보세요.",
+        "KOBIS 서버가 이상한 대답을 했어요... 😵",
+        "잠시 후에 다시 해 봐요! 계속 그러면 KOBIS 사이트 공지(점검 여부)를 확인해 주세요!",
     ),
     "bad_json": (
-        "받은 응답을 해석할 수 없었어요.",
-        "KOBIS 쪽 응답 형식이 바뀌었거나 일시적인 오류일 수 있어요. 잠시 후 다시 시도하고, "
-        "계속되면 API 문서의 응답 구조를 다시 확인해 보세요.",
+        "받은 답을 읽을 수가 없었어요 😢",
+        "KOBIS 쪽 응답 형식이 바뀌었거나 잠깐 문제가 생겼을 수 있어요. "
+        "조금 뒤에 다시 해 보고, 계속되면 API 문서의 응답 구조를 다시 확인해 주세요!",
     ),
     "fault": (
-        "KOBIS가 요청을 거절했어요. (오류 안내 상자가 도착했습니다)",
-        "① Secrets의 KOBIS_KEY 값이 정확한지(앞뒤 공백, 따옴표, 복사 누락)\n\n"
+        "KOBIS가 \"안 돼요!\" 하고 거절했어요 🙅‍♀️ (오류 안내 상자가 도착했어요)",
+        "이것들을 KOBIS 오픈API 사이트에서 확인해 주세요!\n\n"
+        "① Secrets의 KOBIS_KEY 값이 정확한지 (앞뒤 공백, 따옴표, 복사 빠짐)\n\n"
         "② 인증키가 정상 발급·승인된 상태인지\n\n"
-        "③ 하루 호출 가능 횟수를 넘기지 않았는지\n\n"
-        "를 KOBIS 오픈API 사이트에서 확인해 보세요.",
+        "③ 하루 호출 가능 횟수를 넘기지 않았는지",
     ),
     "empty": (
         "그날은 아직 집계 전입니다.",
-        "달력에서 다른 날짜를 골라 보세요. 어제 날짜인데도 계속 비어 있다면 "
-        "잠시 뒤에 다시 시도하거나, KOBIS 사이트에서 같은 날짜 데이터가 있는지 확인해 보세요.",
+        "달력에서 다른 날짜를 골라 봐요! 🗓️ 어제 날짜인데도 계속 비어 있으면 "
+        "조금 있다가 다시 해 보거나, KOBIS 사이트에 같은 날짜 데이터가 있는지 확인해 주세요!",
     ),
 }
 
@@ -152,7 +152,8 @@ def show_error(kind):
 # ─────────────────────────────────────────────
 # 화면 시작
 # ─────────────────────────────────────────────
-st.title("🎬 일별 박스오피스")
+st.title("🎬 박스오피스 알려줄게요!")
+st.write("안녕하세요! 🌸 오늘은 제가 영화 순위를 알려 드릴게요. 보고 싶은 날짜를 골라 주세요!")
 
 yesterday = get_yesterday_kst()
 
@@ -160,14 +161,14 @@ yesterday = get_yesterday_kst()
 # max_value 덕분에 어제보다 늦은 날(오늘 포함)은 고를 수 없습니다.
 # min_value는 KOBIS 일별 자료가 제공되기 시작한 무렵의 날짜입니다.
 picked = st.date_input(
-    "조회 날짜",
+    "어느 날 순위가 궁금해요? 📅",
     value=yesterday,
     min_value=date(2003, 11, 11),
     max_value=yesterday,
-    help="오늘 집계는 아직 끝나지 않아서, 어제까지만 고를 수 있어요.",
+    help="오늘 집계는 아직 끝나지 않아서, 어제까지만 고를 수 있어요!",
 )
 target_dt = picked.strftime("%Y%m%d")  # 예: 20261020 (yyyymmdd 여덟 자리)
-st.caption(f"조회 날짜: {picked.strftime('%Y년 %m월 %d일')} · 출처: 영화진흥위원회 KOBIS")
+st.caption(f"{picked.strftime('%Y년 %m월 %d일')} 순위예요 · 출처: 영화진흥위원회 KOBIS")
 
 # 1) 인증키 확인
 api_key = load_api_key()
@@ -176,7 +177,7 @@ if api_key is None:
 
 # 2) 데이터 가져오기
 try:
-    with st.spinner("박스오피스를 불러오는 중..."):
+    with st.spinner("순위표 가져오는 중이에요~ 조금만 기다려 주세요! 🏃‍♀️"):
         movies = fetch_box_office(api_key, target_dt)
 except KobisError as e:
     show_error(e.kind)
@@ -205,7 +206,7 @@ df["movie_label"] = df["movieNm"].fillna("-").astype(str) + df["audiAcc"].ge(1_0
 )
 
 # 4) 1위 영화: 지표 카드 세 장
-st.subheader(f"🥇 {picked.strftime('%m월 %d일')}의 1위")
+st.subheader(f"🥇 {picked.strftime('%m월 %d일')}의 1등은 바로바로...!")
 top = df.iloc[0]
 
 
@@ -215,15 +216,15 @@ def fmt(num, unit=""):
 
 
 c1, c2, c3 = st.columns(3)
-c1.metric("영화명", top["movie_label"])
-c2.metric("그날 관객수", fmt(top["audiCnt"], "명"))
-c3.metric("누적 관객수", fmt(top["audiAcc"], "명"))
+c1.metric("1등 영화 🎉", top["movie_label"])
+c2.metric("그날 본 사람 수", fmt(top["audiCnt"], "명"))
+c3.metric("지금까지 본 사람 수", fmt(top["audiAcc"], "명"))
 
 # 5) 관객수 상위 5편 막대그래프
-st.subheader("📊 관객수 상위 5편")
+st.subheader("📊 사람들이 제일 많이 본 영화 5편이에요!")
 top5 = df.dropna(subset=["audiCnt"]).nlargest(5, "audiCnt")
 if top5.empty:
-    st.info("관객수 정보가 없어 그래프를 그릴 수 없어요.")
+    st.info("관객수 정보가 없어서 그래프를 못 그렸어요 🥲")
 else:
     chart = (
         alt.Chart(top5)
@@ -240,7 +241,7 @@ else:
     st.altair_chart(chart, use_container_width=True)
 
 # 6) 전체 순위 표
-st.subheader("📋 전체 순위")
+st.subheader("📋 전체 순위표도 보여 드릴게요!")
 
 
 def rank_change_text(n):
@@ -274,4 +275,4 @@ styled = table.style.apply(
     lambda col: [rank_change_style(v) for v in col], subset=["등락"]
 )
 st.dataframe(styled, hide_index=True, use_container_width=True)
-st.caption("▲ 빨강: 전날보다 순위 상승 · ▼ 파랑: 전날보다 순위 하락 · 🏆 누적 100만 명 돌파")
+st.caption("▲ 빨강은 어제보다 순위가 올랐다는 뜻, ▼ 파랑은 내렸다는 뜻이에요! 🏆는 100만 명이 넘게 본 영화예요~")
