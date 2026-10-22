@@ -1,11 +1,12 @@
 # -*- coding: utf-8 -*-
 """
-어제의 박스오피스 (KOBIS 일별 박스오피스 API)
+일별 박스오피스 (KOBIS 일별 박스오피스 API)
 - 인증키는 Streamlit 비밀 금고(secrets)의 KOBIS_KEY에서만 읽어옵니다.
+- 달력에서 날짜를 고를 수 있고, 고를 수 있는 가장 늦은 날은 '어제'입니다.
 - '어제'는 서버 시계가 아니라 한국 시간(KST) 기준으로 계산합니다.
 """
 
-from datetime import datetime, timedelta, timezone
+from datetime import date, datetime, timedelta, timezone
 
 import altair as alt          # 막대그래프(스트림릿에 기본 포함되어 있음)
 import pandas as pd
@@ -133,9 +134,9 @@ ERROR_GUIDE = {
         "를 KOBIS 오픈API 사이트에서 확인해 보세요.",
     ),
     "empty": (
-        "해당 날짜의 영화 목록이 비어 있어요.",
-        "아직 어제 집계가 끝나지 않았을 수 있어요. 잠시 후 다시 시도해 보세요. "
-        "그래도 비어 있으면 KOBIS 사이트에서 같은 날짜 데이터가 있는지 확인해 보세요.",
+        "그날은 아직 집계 전입니다.",
+        "달력에서 다른 날짜를 골라 보세요. 어제 날짜인데도 계속 비어 있다면 "
+        "잠시 뒤에 다시 시도하거나, KOBIS 사이트에서 같은 날짜 데이터가 있는지 확인해 보세요.",
     ),
 }
 
@@ -151,11 +152,22 @@ def show_error(kind):
 # ─────────────────────────────────────────────
 # 화면 시작
 # ─────────────────────────────────────────────
-st.title("🎬 어제의 박스오피스")
+st.title("🎬 일별 박스오피스")
 
 yesterday = get_yesterday_kst()
-target_dt = yesterday.strftime("%Y%m%d")  # 예: 20261020 (yyyymmdd 여덟 자리)
-st.caption(f"조회 날짜: {yesterday.strftime('%Y년 %m월 %d일')} (한국 시간 기준) · 출처: 영화진흥위원회 KOBIS")
+
+# 달력으로 날짜 고르기. 처음에는 어제가 선택되어 있고,
+# max_value 덕분에 어제보다 늦은 날(오늘 포함)은 고를 수 없습니다.
+# min_value는 KOBIS 일별 자료가 제공되기 시작한 무렵의 날짜입니다.
+picked = st.date_input(
+    "조회 날짜",
+    value=yesterday,
+    min_value=date(2003, 11, 11),
+    max_value=yesterday,
+    help="오늘 집계는 아직 끝나지 않아서, 어제까지만 고를 수 있어요.",
+)
+target_dt = picked.strftime("%Y%m%d")  # 예: 20261020 (yyyymmdd 여덟 자리)
+st.caption(f"조회 날짜: {picked.strftime('%Y년 %m월 %d일')} · 출처: 영화진흥위원회 KOBIS")
 
 # 1) 인증키 확인
 api_key = load_api_key()
@@ -176,18 +188,24 @@ except Exception:
 df = pd.DataFrame(movies)
 
 # 혹시 빠진 칸이 있어도 앱이 죽지 않도록 없는 열은 빈 값으로 채웁니다.
-needed = ["rank", "movieNm", "openDt", "audiCnt", "audiAcc", "scrnCnt"]
+needed = ["rank", "rankInten", "movieNm", "openDt", "audiCnt", "audiAcc", "scrnCnt"]
 for col in needed:
     if col not in df.columns:
         df[col] = None
 
-for col in ["rank", "audiCnt", "audiAcc", "scrnCnt"]:
+for col in ["rank", "rankInten", "audiCnt", "audiAcc", "scrnCnt"]:
     df[col] = pd.to_numeric(df[col], errors="coerce")  # 숫자로 못 바꾸면 빈 값(NaN)
 
 df = df.sort_values("rank").reset_index(drop=True)
 
+# 누적 관객이 100만 명 이상이면 영화명 옆에 트로피를 붙입니다.
+# (누적 관객 값이 비어 있으면 비교 결과가 False라서 트로피가 붙지 않습니다.)
+df["movie_label"] = df["movieNm"].fillna("-").astype(str) + df["audiAcc"].ge(1_000_000).map(
+    {True: " 🏆", False: ""}
+)
+
 # 4) 1위 영화: 지표 카드 세 장
-st.subheader("🥇 어제의 1위")
+st.subheader(f"🥇 {picked.strftime('%m월 %d일')}의 1위")
 top = df.iloc[0]
 
 
@@ -197,8 +215,8 @@ def fmt(num, unit=""):
 
 
 c1, c2, c3 = st.columns(3)
-c1.metric("영화명", str(top["movieNm"]))
-c2.metric("어제 관객수", fmt(top["audiCnt"], "명"))
+c1.metric("영화명", top["movie_label"])
+c2.metric("그날 관객수", fmt(top["audiCnt"], "명"))
 c3.metric("누적 관객수", fmt(top["audiAcc"], "명"))
 
 # 5) 관객수 상위 5편 막대그래프
@@ -212,7 +230,7 @@ else:
         .mark_bar()
         .encode(
             x=alt.X("movieNm:N", sort="-y", title="영화명", axis=alt.Axis(labelAngle=0)),
-            y=alt.Y("audiCnt:Q", title="어제 관객수(명)"),
+            y=alt.Y("audiCnt:Q", title="그날 관객수(명)"),
             tooltip=[
                 alt.Tooltip("movieNm:N", title="영화명"),
                 alt.Tooltip("audiCnt:Q", title="관객수", format=","),
@@ -223,14 +241,37 @@ else:
 
 # 6) 전체 순위 표
 st.subheader("📋 전체 순위")
+
+
+def rank_change_text(n):
+    """rankInten(전날 대비 순위 증감): 양수면 오른 것(▲), 음수면 내린 것(▼)."""
+    if pd.isna(n) or n == 0:
+        return "-"
+    return f"▲ {int(n)}" if n > 0 else f"▼ {abs(int(n))}"
+
+
+def rank_change_style(text):
+    """▲는 빨간색, ▼는 파란색으로 글자색을 정합니다."""
+    if text.startswith("▲"):
+        return "color: #e03131; font-weight: bold"
+    if text.startswith("▼"):
+        return "color: #1c7ed6; font-weight: bold"
+    return ""
+
+
 table = pd.DataFrame(
     {
         "순위": df["rank"].apply(fmt),
-        "영화명": df["movieNm"],
+        "등락": df["rankInten"].apply(rank_change_text),
+        "영화명": df["movie_label"],
         "개봉일": df["openDt"].fillna("-").replace("", "-"),
         "관객수": df["audiCnt"].apply(fmt),
         "누적관객": df["audiAcc"].apply(fmt),
         "스크린수": df["scrnCnt"].apply(fmt),
     }
 )
-st.dataframe(table, hide_index=True, use_container_width=True)
+styled = table.style.apply(
+    lambda col: [rank_change_style(v) for v in col], subset=["등락"]
+)
+st.dataframe(styled, hide_index=True, use_container_width=True)
+st.caption("▲ 빨강: 전날보다 순위 상승 · ▼ 파랑: 전날보다 순위 하락 · 🏆 누적 100만 명 돌파")
